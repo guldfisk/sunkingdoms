@@ -29,6 +29,7 @@ setup(
         'eventdispatch',
         'eventtree',
         'gameframe',
+        'weakreflist',
     ],
 
 )
