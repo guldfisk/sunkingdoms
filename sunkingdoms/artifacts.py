@@ -1,33 +1,87 @@
+from __future__ import annotations
+
+import random
 import typing as t
 
-from weakreflist import WeakList
-
-from eventtree.replaceevent import Attributed, Condition
-
+from eventtree.replaceevent import EventSession
 from gameframe.events import GameEvent
+from sunkingdoms.zones import Zoneable, Zone
 
-from sunkingdoms.game import SKGame
+
+class Price(object):
+
+    def __init__(self, amount: int):
+        self._amount = amount
 
 
-class GameArtifact(Attributed):
+class Cardboard(Zoneable):
 
-    def __init__(self, game: SKGame, event: GameEvent):
-        super().__init__(game)
-        self._connected_conditions = WeakList()
+    def __init__(self, game: EventSession, event: GameEvent, card_type: t.Type[Card]):
+        super().__init__(game, event)
+        self._printed_card_type = card_type
+        self._card = card_type(self, event)
+        self._zone = None
 
-    def create_condition(self, condition_type: t.Type[Condition], parent: GameEvent, **kwargs):
-        self._connected_conditions.append(
-            self._session.create_condition(
-                condition_type = condition_type,
-                parent = parent,
-                source = self,
-                **kwargs,
-            )
-        )
+    @property
+    def card(self) -> Card:
+        return self._card
 
-    def disconnect(self, parent: GameEvent):
-        while self._connected_conditions:
-            self._session.disconnect_condition(
-                condition = self._connected_conditions.pop(-1)(),
-                parent = parent,
-            )
+    @property
+    def zone(self) -> Zone:
+        return self._zone
+
+    @zone.setter
+    def zone(self, zone: Zone) -> None:
+        self._zone = zone
+
+
+class Action(object):
+
+    def __init__(self, text: str):
+        self._exhausted = False
+        self._text = text
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    def refresh(self) -> None:
+        self._exhausted = False
+
+    def requirements_fulfilled(self, event: GameEvent) -> bool:
+        pass
+
+    def available(self, event: GameEvent) -> bool:
+        return not self._exhausted and self.requirements_fulfilled(event)
+
+    def cost(self, event: GameEvent):
+        pass
+
+    def do(self, event: GameEvent):
+        pass
+
+
+class Actions(object):
+
+    def __init__(self, actions: t.Iterable[Action]):
+        self._actions = list(actions)
+
+    def __iter__(self) -> t.Iterator[Action]:
+        return self._actions.__iter__()
+
+    def refresh(self) -> None:
+        for action in self._actions:
+            action.refresh()
+
+
+class Card(object):
+    name: str
+    actions: Actions = Actions(())
+    price: Price
+
+    def __init__(self, cardboard: Cardboard, event: GameEvent):
+        self._cardboard = cardboard
+        # self._price = Price
+
+    def on_play(self, cardboard: Cardboard, event: GameEvent):
+        pass
