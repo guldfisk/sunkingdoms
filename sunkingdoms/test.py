@@ -1,3 +1,4 @@
+from eventtree.replaceevent import EventSession
 from gameframe.gamesession import GameSession
 from sunkingdoms.interface import SKPlayerSignature, SKDummyController, SKDummyInterface
 from sunkingdoms.livegame import LiveGame
@@ -25,6 +26,14 @@ def test():
     # )
     # game_session.start()
     # game_session.join()
+
+
+# def other_test():
+#     from gameframe.events import GameEvent, GameEventSUB
+#
+#     s = GameEventSUB(EventSession(), value = 10)
+#     s.value = 21
+#     print(s.value)
 
 
 if __name__ == '__main__':

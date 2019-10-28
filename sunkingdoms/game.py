@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 import typing as t
 
 from gameframe.events import GameEvent
@@ -19,7 +18,7 @@ class SKGame(Game):
         super().__init__(setup_info, interface)
 
         self._players = Ring(
-            SKPlayer()
+            SKPlayer(self)
             for _ in
             range(setup_info.player_count)
         )
@@ -32,6 +31,12 @@ class SKGame(Game):
         )
         self._trade_row = Zone(
             'trade row',
+            ordered = False,
+            private = False,
+            face_up = True,
+        )
+        self._scrap_pile = Zone(
+            'scrap',
             ordered = False,
             private = False,
             face_up = True,

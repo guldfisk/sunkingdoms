@@ -2,7 +2,7 @@ import typing as t
 
 from gameframe.connectioncontroller import ConnectionController
 from gameframe.events import GameEvent
-from gameframe.interface import GameInterface
+from gameframe.interface import GameInterface, Option
 from gameframe.signature import PlayerSignature
 from sunkingdoms.artifacts import Zone, Cardboard
 from sunkingdoms.players import SKPlayer
@@ -33,8 +33,8 @@ class SKDummyInterface(GameInterface):
         super().__init__(controller)
         self._running_events = 0
 
-    def select_option(self, player: SKPlayer, options: t.Iterable[t.Any]) -> t.Any:
-        options = list(options)
+    def select_option(self, player: SKPlayer, options: t.Iterable[Option]) -> Option:
+        options = sorted(options)
         while True:
             print(', '.join(map(self.serialize_object, player.hand)))
             print(', '.join(map(self.serialize_object, options)))
@@ -57,6 +57,8 @@ class SKDummyInterface(GameInterface):
             return o.card.name
         elif isinstance(o, SKPlayer):
             return 'player'
+        elif isinstance(o, Option):
+            return f'{o.option_type}|{o.value}'
         else:
             return str(o)
 
@@ -69,6 +71,7 @@ class SKDummyInterface(GameInterface):
                 key: self.serialize_object(value)
                 for key, value in
                 event.values.items()
+                if key in event.fields
             },
         )
 

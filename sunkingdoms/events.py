@@ -1,23 +1,22 @@
 import typing as t
+
 from abc import abstractmethod
 
 from eventtree.replaceevent import EventCheckException, EventResolutionException
 from gameframe.events import GameEvent
-from sunkingdoms.artifacts import Card, Cardboard
+from gameframe.interface import Option
+from sunkingdoms.artifacts import Card, Cardboard, Action
 from sunkingdoms import cards
 from sunkingdoms.game import Zone, SKSetup, SKGame
 from sunkingdoms.players import SKPlayer
 
 
 class SKGameEvent(GameEvent):
+    player: SKPlayer
 
     @property
     def game(self) -> SKGame:
         return self._session
-
-    @property
-    def player(self) -> t.Optional[SKPlayer]:
-        return self._values['player']
 
     @abstractmethod
     def payload(self, **kwargs):
@@ -31,30 +30,9 @@ class SKGameEvent(GameEvent):
 
 
 class CreateCardboard(SKGameEvent):
-
-    @property
-    def to(self) -> Zone:
-        return self._values['to']
-
-    @to.setter
-    def to(self, zone: Zone) -> None:
-        self._values['to'] = zone
-
-    @property
-    def card_type(self) -> t.Type[Card]:
-        return self._values['card_type']
-
-    @card_type.setter
-    def card_type(self, card_type: t.Type[Card]) -> None:
-        self._values['card_type'] = card_type
-
-    @property
-    def face_up(self) -> bool:
-        return self._values['face_up']
-
-    @face_up.setter
-    def face_up(self, face_up: bool) -> None:
-        self._values['face_up'] = face_up
+    to: Zone
+    card_type: t.Type[Card]
+    face_up: bool
 
     def setup(self, **kwargs):
         self._values.setdefault('face_up', None)
@@ -70,63 +48,34 @@ class CreateCardboard(SKGameEvent):
 
 
 class MoveCardboard(SKGameEvent):
-
-    @property
-    def target(self) -> Cardboard:
-        return self._values['target']
-
-    @target.setter
-    def target(self, zoneable: Cardboard) -> None:
-        self._values['target'] = zoneable
-
-    @property
-    def frm(self) -> Zone:
-        return self._values['frm']
-
-    @frm.setter
-    def frm(self, zone: Zone) -> None:
-        self._values['frm'] = zone
-
-    @property
-    def to(self) -> Zone:
-        return self._values['to']
-
-    @to.setter
-    def to(self, zone: Zone) -> None:
-        self._values['to'] = zone
-
-    @property
-    def index(self) -> int:
-        return self._values['index']
-
-    @index.setter
-    def index(self, value: int) -> None:
-        self._values['index'] = value
+    target: Cardboard
+    frm: Zone
+    to: Zone
+    index: int
 
     def setup(self, **kwargs):
         self._values.setdefault('index', None)
 
     def check(self, **kwargs):
-        if not self.target in self.frm:
+        if not self.target in self.frm or self.target == self.frm:
             raise EventCheckException()
 
     def payload(self, **kwargs):
         self.to.join(self.target)
+        if self.frm.name == 'battlefield':
+            self.target.card.actions.refresh()
         return self.target
     
     
 class Reshuffle(SKGameEvent):
 
-    # def setup(self, **kwargs):
-    #     self._values.setdefault('to', self.player)
-
     def payload(self, **kwargs):
         if self.player.library:
-            index = len(self.player.graveyard)
-            for cardboard in tuple(self.player.graveyard):
+            index = len(self.player.discard_pile)
+            for cardboard in self.player.discard_pile:
                 self.spawn_tree(
                     MoveCardboard,
-                    frm=self.player.graveyard,
+                    frm=self.player.discard_pile,
                     to=self.player.library,
                     target=cardboard,
                     index = 0,
@@ -159,14 +108,7 @@ class DrawCardboard(SKGameEvent):
 
 
 class DrawCardboards(SKGameEvent):
-
-    @property
-    def amount(self) -> int:
-        return self._values['amount']
-
-    @amount.setter
-    def amount(self, value: int) -> None:
-        self._values['amount'] = value
+    amount: int
 
     def payload(self, **kwargs):
         cardboards = []
@@ -179,14 +121,7 @@ class DrawCardboards(SKGameEvent):
     
     
 class DrawHand(SKGameEvent):
-
-    @property
-    def amount(self) -> int:
-        return self._values['amount']
-
-    @amount.setter
-    def amount(self, value: int) -> None:
-        self._values['amount'] = value
+    amount: int
 
     def setup(self, **kwargs):
         self._values.setdefault('amount', 5)
@@ -196,26 +131,9 @@ class DrawHand(SKGameEvent):
 
 
 class RefillTradeRow(SKGameEvent):
-
-    @property
-    def target(self) -> Cardboard:
-        return self._values['target']
-
-    @target.setter
-    def target(self, cardboard: Cardboard) -> None:
-        self._values['target'] = cardboard
-
-    @property
-    def frm(self) -> Zone:
-        return self._values['frm']
-
-    @property
-    def to(self) -> Zone:
-        return self._values['to']
-
-    @to.setter
-    def to(self, zone: Zone) -> None:
-        self._values['to'] = zone
+    target: Cardboard
+    frm: Zone
+    to: Zone
 
     def setup(self, **kwargs):
         self._values.setdefault('to', self.game.trade_row)
@@ -227,24 +145,14 @@ class RefillTradeRow(SKGameEvent):
 
 
 class ShuffleZone(SKGameEvent):
-
-    @property
-    def to(self) -> Zone:
-        return self._values['to']
-
-    @to.setter
-    def to(self, zone: Zone) -> None:
-        self._values['to'] = zone
+    to: Zone
 
     def payload(self, **kwargs):
         self.to.shuffle()
 
 
 class SetupGame(SKGameEvent):
-
-    @property
-    def setup_info(self) -> SKSetup:
-        return self._values['setup_info']
+    setup_info: SKSetup
 
     def payload(self, **kwargs):
         for _ in range(10):
@@ -260,7 +168,7 @@ class SetupGame(SKGameEvent):
             for _ in range(8):
                 self.spawn_tree(
                     CreateCardboard,
-                    card_type = cards.Scout,
+                    card_type = cards.FederationShuttle,
                     to = player.discard_pile,
                 )
             for _ in range(2):
@@ -273,25 +181,230 @@ class SetupGame(SKGameEvent):
             self.spawn_tree(DrawHand, player = player)
 
 
-class TakeTurn(SKGameEvent):
+class Move(Option):
 
-    @property
-    def player(self) -> SKPlayer:
-        return self._values['player']
+    def __init__(self, option_type: str, value: str, callback: t.Callable[[], None]):
+        super().__init__(option_type, value)
+        self._callback = callback
+
+    def do(self) -> None:
+        self._callback()
+
+
+class CastCardboard(SKGameEvent):
+    target: Cardboard
+    frm: Zone
+    to: Zone
+
+    def setup(self, **kwargs):
+        self._values.setdefault('frm', self.player.hand)
+        self._values.setdefault('to', self.player.battlefield)
 
     def payload(self, **kwargs):
-        self.game.interface.select_option(self.player, list(range(3)))
+        self.depend_tree(MoveCardboard)
+        self.target.card.on_play(self)
+
+
+class DestroyCardboard(SKGameEvent):
+    target: Cardboard
+    frm: Zone
+    to: Zone
+
+    def setup(self, **kwargs):
+        self._values.setdefault('frm', self.player.battlefield)
+        self._values.setdefault('to', self.player.discard_pile)
+
+    def payload(self, **kwargs):
+        self.depend_tree(MoveCardboard)
+
+
+class DiscardCardboard(SKGameEvent):
+    target: Cardboard
+    frm: Zone
+    to: Zone
+
+    def setup(self, **kwargs):
+        self._values.setdefault('frm', self.player.hand)
+        self._values.setdefault('to', self.player.discard_pile)
+
+    def payload(self, **kwargs):
+        self.spawn_tree(MoveCardboard)
+
+
+class AddMoney(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.money += self.amount
+
+
+class SubtractMoney(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.money -= self.amount
+
+
+class PayMoney(SKGameEvent):
+    amount: int
+
+    def check(self, **kwargs):
+        if not self.player.money >= self.amount:
+            raise EventCheckException()
+
+    def payload(self, **kwargs):
+        self.depend_tree(SubtractMoney)
+
+
+class BuyCardboard(SKGameEvent):
+    target: Cardboard
+    frm: Zone
+    to: Zone
+
+    def setup(self, **kwargs):
+        self._values.setdefault('frm', self.game.trade_row)
+        self._values.setdefault('to', self.player.discard_pile)
+
+    def payload(self, **kwargs):
+        self.depend_tree(PayMoney, amount = self.target.card.price.amount)
+        self.spawn_tree(MoveCardboard)
+
+
+class AddDamage(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.damage += self.amount
+
+
+class ResetResources(SKGameEvent):
+
+    def payload(self, **kwargs):
+        self.player.money = 0
+        self.player.damage = 0
+
+
+class ActivateAction(SKGameEvent):
+    target: Cardboard
+    action: Action
+
+    def payload(self, **kwargs):
+        self.action.cost(self)
+        self.action.do(self)
+        self.action.exhaust()
+
+
+class GainInfluence(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.influence += self.amount
+
+
+class TakeTurn(SKGameEvent):
+
+    def _play_cardboard_action(self, cardboard: Cardboard) -> Move:
+        return Move(
+            'play card',
+            cardboard.card.name,
+            lambda : self.spawn_tree(
+                CastCardboard,
+                target = cardboard,
+            )
+        )
+
+    def _buy_cardboard_action(self, cardboard: Cardboard) -> Move:
+        return Move(
+            'buy card',
+            cardboard.card.name,
+            lambda : self.spawn_tree(
+                BuyCardboard,
+                target = cardboard,
+            )
+        )
+
+    def _activate_cardboard_action(self, cardboard: Cardboard, action: Action):
+        return Move(
+            'activate cardboard',
+            cardboard.card.name,
+            lambda : self.spawn_tree(
+                ActivateAction,
+                target = cardboard,
+                action = action,
+            )
+        )
+
+    def payload(self, **kwargs):
+        while True:
+            moves: t.List[Move] = []
+            for cardboard in self.player.hand:
+                moves.append(self._play_cardboard_action(cardboard))
+
+            for cardboard in self.game.trade_row:
+                if cardboard.card.price.amount <= self.player.money:
+                    moves.append(
+                        self._buy_cardboard_action(cardboard)
+                    )
+
+            for cardboard in self.player.battlefield:
+                for action in cardboard.card.actions:
+                    if action.available(self):
+                        moves.append(
+                            self._activate_cardboard_action(
+                                cardboard,
+                                action,
+                            )
+                        )
+
+            if not moves:
+                break
+
+            pass_turn = Move('pass turn', 'pass turn', lambda : None)
+
+            moves.append(pass_turn)
+
+            move = self.game.interface.select_option(
+                self.player,
+                moves,
+            )
+
+            if move == pass_turn:
+                break
+
+            move.do()
+
+        for cardboard in self.player.battlefield.iter_copy():
+            self.spawn_tree(DestroyCardboard, target = cardboard)
+
+        for cardboard in self.player.hand.iter_copy():
+            self.spawn_tree(DiscardCardboard, target = cardboard)
+
+        self.spawn_tree(ResetResources)
+        self.spawn_tree(DrawHand)
+
+
+class GameFinished(SKGameEvent):
+    winner: SKPlayer
+
+    def payload(self, **kwargs):
+        pass
 
 
 class PlayGame(SKGameEvent):
+    setup_info: SKSetup
 
-    @property
-    def setup_info(self) -> SKSetup:
-        return self._values['setup_info']
+    def _check_game_end(self) -> t.Optional[SKPlayer]:
+        for player in self.game.players.all:
+            if player.influence <= 100:
+                return self.game.players.loop_from(player).__next__()
 
     def payload(self, **kwargs):
         self.spawn_tree(SetupGame)
 
-        for _ in range(4):
+        while True:
             player = self.game.players.next()
             self.spawn_tree(TakeTurn, player = player)
+            winner = self._check_game_end()
+            if winner:
+                self.spawn_tree(GameFinished, winner = winner)
+                break

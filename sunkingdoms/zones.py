@@ -1,5 +1,6 @@
 import random
 import typing as t
+import copy
 
 from sunkingdoms.artifact import GameArtifact
 
@@ -40,14 +41,14 @@ class Zone(t.Generic[Z]):
     def leave(self, cardboard: Z) -> None:
         self._cardboards.remove(cardboard)
 
-    def join(self, cardboards: Z, index: t.Optional[int] = None) -> None:
-        if cardboards.zone is not None:
-            cardboards.zone.leave(cardboards)
-        cardboards._zone = self
+    def join(self, cardboard: Z, index: t.Optional[int] = None) -> None:
+        if cardboard.zone is not None:
+            cardboard.zone.leave(cardboard)
+        cardboard._zone = self
         if index is None:
-            self._cardboards.append(cardboards)
+            self._cardboards.append(cardboard)
         else:
-            self._cardboards.insert(index, cardboards)
+            self._cardboards.insert(index, cardboard)
 
     def shuffle(self, to: t.Optional[int] = None) -> None:
         if to is None:
@@ -58,11 +59,29 @@ class Zone(t.Generic[Z]):
                 to if to >= 0 else len(self._cardboards) + to
             )
 
+    def iter_copy(self) -> t.Iterator[Z]:
+        return copy.copy(self._cardboards).__iter__()
+
     def __getitem__(self, item: int) -> Z:
         return self._cardboards.__getitem__(item)
 
+    def __iter__(self) -> t.Iterator[Z]:
+        return self._cardboards.__iter__()
+
     def __bool__(self) -> bool:
         return bool(self._cardboards)
+
+    def __len__(self) -> int:
+        return len(self._cardboards)
+
+    def __contains__(self, item: Z) -> bool:
+        return self._cardboards.__contains__(item)
+
+    def __repr__(self) -> str:
+        return '{}({})'.format(
+            self.__class__.__name__,
+            self._cardboards,
+        )
 
     @property
     def cards(self) -> t.MutableSequence[Z]:

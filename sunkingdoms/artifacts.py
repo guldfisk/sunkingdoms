@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import random
 import typing as t
+from enum import Enum
 
 from eventtree.replaceevent import EventSession
 from gameframe.events import GameEvent
@@ -12,6 +12,10 @@ class Price(object):
 
     def __init__(self, amount: int):
         self._amount = amount
+
+    @property
+    def amount(self) -> int:
+        return self._amount
 
 
 class Cardboard(Zoneable):
@@ -45,6 +49,9 @@ class Action(object):
     def text(self) -> str:
         return self._text
 
+    def exhaust(self) -> None:
+        self._exhausted = True
+
     def refresh(self) -> None:
         self._exhausted = False
 
@@ -60,6 +67,9 @@ class Action(object):
     def do(self, event: GameEvent):
         pass
 
+    def __repr__(self):
+        return self.text
+
 
 class Actions(object):
 
@@ -74,14 +84,25 @@ class Actions(object):
             action.refresh()
 
 
+class Faction(Enum):
+    YELLOW = 'yellow'
+    BLUE = 'blue'
+    RED = 'red'
+    GREEN = 'green'
+
+
 class Card(object):
     name: str
-    actions: Actions = Actions(())
     price: Price
+    factions: t.FrozenSet[Faction] = frozenset()
 
     def __init__(self, cardboard: Cardboard, event: GameEvent):
         self._cardboard = cardboard
-        # self._price = Price
+        self._actions = Actions(())
 
-    def on_play(self, cardboard: Cardboard, event: GameEvent):
+    def on_play(self, event: GameEvent):
         pass
+
+    @property
+    def actions(self) -> Actions:
+        return self._actions
