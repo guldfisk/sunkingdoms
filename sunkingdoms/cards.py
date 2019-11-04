@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from eventtree import replaceevent as rev
 from gameframe.events import GameEvent
 from sunkingdoms.artifacts import Card, Price, Cardboard, Actions, Action, Faction
 from sunkingdoms import events as e
@@ -50,7 +51,7 @@ class FederationShuttle(Card):
                 AllyAction(
                     'Gain 4 influence',
                     Faction.BLUE,
-                    self._gain_influence,
+                    self._action,
                 ),
             )
         )
@@ -59,5 +60,64 @@ class FederationShuttle(Card):
         event.spawn_tree(e.AddMoney, amount = 2)
 
     @classmethod
-    def _gain_influence(cls, event: e.ActivateAction) -> None:
+    def _action(cls, event: e.ActivateAction) -> None:
         event.spawn_tree(e.GainInfluence, amount = 4)
+
+
+class Cutter(Card):
+    name = 'Cutter'
+    price = Price(2)
+    factions = frozenset((Faction.BLUE, ))
+
+    def __init__(self, cardboard: Cardboard, event: GameEvent):
+        super().__init__(cardboard, event)
+        self._actions = Actions(
+            (
+                AllyAction(
+                    'Gain 4 damage',
+                    Faction.BLUE,
+                    self._action,
+                ),
+            )
+        )
+
+    def on_play(self, event: GameEvent):
+        event.spawn_tree(e.AddMoney, amount = 2)
+        event.spawn_tree(e.GainInfluence, amount = 4)
+
+    @classmethod
+    def _action(cls, event: e.ActivateAction) -> None:
+        event.spawn_tree(e.AddDamage, amount = 4)
+
+
+class TopdeckNextShipBought(rev.ContinuousDelayedReplacement):
+    trigger = 'BuyCardboard'
+    terminate_trigger = 'TakeTurn'
+
+    def _replace(self, event: e.BuyCardboard):
+        event.replace_clone(to=event.player.library)
+
+
+class Freighter(Card):
+    name = 'Freighter'
+    price = Price(4)
+    factions = frozenset((Faction.BLUE, ))
+
+    def __init__(self, cardboard: Cardboard, event: GameEvent):
+        super().__init__(cardboard, event)
+        self._actions = Actions(
+            (
+                AllyAction(
+                    'Topdeck next ship',
+                    Faction.BLUE,
+                    self._action,
+                ),
+            )
+        )
+
+    def on_play(self, event: GameEvent):
+        event.spawn_tree(e.AddMoney, amount = 4)
+
+    @classmethod
+    def _action(cls, event: e.ActivateAction) -> None:
+        event.game.create_condition(TopdeckNextShipBought)

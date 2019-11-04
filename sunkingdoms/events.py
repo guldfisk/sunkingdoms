@@ -161,6 +161,12 @@ class SetupGame(SKGameEvent):
                 card_type = cards.FederationShuttle,
                 to = self.game.trade_deck,
             )
+        for _ in range(10):
+            self.spawn_tree(
+                CreateCardboard,
+                card_type = cards.Cutter,
+                to = self.game.trade_deck,
+            )
         self.spawn_tree(ShuffleZone, to = self.game.trade_deck)
         for _ in range(5):
             self.spawn_tree(RefillTradeRow)
@@ -168,7 +174,7 @@ class SetupGame(SKGameEvent):
             for _ in range(8):
                 self.spawn_tree(
                     CreateCardboard,
-                    card_type = cards.FederationShuttle,
+                    card_type = cards.Freighter,
                     to = player.discard_pile,
                 )
             for _ in range(2):
@@ -268,6 +274,7 @@ class BuyCardboard(SKGameEvent):
     def payload(self, **kwargs):
         self.depend_tree(PayMoney, amount = self.target.card.price.amount)
         self.spawn_tree(MoveCardboard)
+        self.branch(RefillTradeRow, player = self.player)
 
 
 class AddDamage(SKGameEvent):
@@ -395,7 +402,7 @@ class PlayGame(SKGameEvent):
 
     def _check_game_end(self) -> t.Optional[SKPlayer]:
         for player in self.game.players.all:
-            if player.influence <= 100:
+            if player.influence <= 0:
                 return self.game.players.loop_from(player).__next__()
 
     def payload(self, **kwargs):
