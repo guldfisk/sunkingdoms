@@ -2,12 +2,12 @@ import typing as t
 
 from weakreflist import WeakList
 
-from eventtree.replaceevent import Attributed, Condition, EventSession
+from eventtree.replaceevent import SessionBound, Condition, EventSession
 
 from gameframe.events import GameEvent
 
 
-class GameArtifact(Attributed):
+class GameArtifact(SessionBound):
 
     def __init__(self, game: EventSession, event: GameEvent):
         super().__init__(game)

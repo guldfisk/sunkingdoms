@@ -38,6 +38,10 @@ class Zone(t.Generic[Z]):
     def name(self) -> str:
         return self._name
 
+    @property
+    def owner(self) -> t.Optional[ZoneOwner]:
+        return self._owner
+
     def leave(self, cardboard: Z) -> None:
         self._cardboards.remove(cardboard)
 
@@ -80,7 +84,7 @@ class Zone(t.Generic[Z]):
     def __repr__(self) -> str:
         return '{}({})'.format(
             self.__class__.__name__,
-            self._cardboards,
+            self._name,
         )
 
     @property

@@ -49,8 +49,8 @@ class SKGame(Game):
     def log_event(self, event: GameEvent) -> None:
         self._interface.notify_event_start(event)
 
-    def event_finished(self, event: GameEvent) -> None:
-        self._interface.notify_event_end(event)
+    def event_finished(self, event: GameEvent, success: bool) -> None:
+        self._interface.notify_event_end(event, success)
 
     @property
     def trade_deck(self) -> Zone[Cardboard]:
@@ -59,6 +59,10 @@ class SKGame(Game):
     @property
     def trade_row(self) -> Zone[Cardboard]:
         return self._trade_row
+
+    @property
+    def scrap_pile(self) -> Zone[Cardboard]:
+        return self._scrap_pile
 
     def start(self):
         pass

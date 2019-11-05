@@ -91,10 +91,16 @@ class Faction(Enum):
     GREEN = 'green'
 
 
+class CardType(Enum):
+    SHIP = 'ship'
+    BASE = 'base'
+
+
 class Card(object):
     name: str
     price: Price
     factions: t.FrozenSet[Faction] = frozenset()
+    card_type: CardType = CardType.SHIP
 
     def __init__(self, cardboard: Cardboard, event: GameEvent):
         self._cardboard = cardboard
@@ -106,3 +112,9 @@ class Card(object):
     @property
     def actions(self) -> Actions:
         return self._actions
+
+
+class Base(Card):
+    card_type = CardType.BASE
+    health: int
+    outpost: bool

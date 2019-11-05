@@ -5,7 +5,7 @@ from abc import abstractmethod
 from eventtree.replaceevent import EventCheckException, EventResolutionException
 from gameframe.events import GameEvent
 from gameframe.interface import Option
-from sunkingdoms.artifacts import Card, Cardboard, Action
+from sunkingdoms.artifacts import Card, Cardboard, Action, CardType
 from sunkingdoms import cards
 from sunkingdoms.game import Zone, SKSetup, SKGame
 from sunkingdoms.players import SKPlayer
@@ -57,7 +57,7 @@ class MoveCardboard(SKGameEvent):
         self._values.setdefault('index', None)
 
     def check(self, **kwargs):
-        if not self.target in self.frm or self.target == self.frm:
+        if not self.target in self.frm:
             raise EventCheckException()
 
     def payload(self, **kwargs):
@@ -138,7 +138,7 @@ class RefillTradeRow(SKGameEvent):
     def setup(self, **kwargs):
         self._values.setdefault('to', self.game.trade_row)
         self._values.setdefault('frm', self.game.trade_deck)
-        self._values.setdefault('target', self.game.trade_deck[-1])
+        self._values.setdefault('target', self.game.trade_deck[-1] if self.game.trade_deck else None)
 
     def payload(self, **kwargs):
         return self.depend_tree(MoveCardboard)
@@ -167,22 +167,26 @@ class SetupGame(SKGameEvent):
                 card_type = cards.Cutter,
                 to = self.game.trade_deck,
             )
+
         self.spawn_tree(ShuffleZone, to = self.game.trade_deck)
+
         for _ in range(5):
             self.spawn_tree(RefillTradeRow)
+
         for player in self.game.players.all:
-            for _ in range(8):
+            for _ in range(5):
                 self.spawn_tree(
                     CreateCardboard,
-                    card_type = cards.Freighter,
+                    card_type = cards.MechWorld,
                     to = player.discard_pile,
                 )
-            for _ in range(2):
+            for _ in range(5):
                 self.spawn_tree(
                     CreateCardboard,
-                    card_type = cards.Viper,
+                    card_type = cards.BlobFighter,
                     to = player.discard_pile,
                 )
+
         for player in self.game.players.all:
             self.spawn_tree(DrawHand, player = player)
 
@@ -232,6 +236,18 @@ class DiscardCardboard(SKGameEvent):
     def setup(self, **kwargs):
         self._values.setdefault('frm', self.player.hand)
         self._values.setdefault('to', self.player.discard_pile)
+
+    def payload(self, **kwargs):
+        self.spawn_tree(MoveCardboard)
+
+
+class ScrapCardboard(SKGameEvent):
+    target: Cardboard
+    frm: Zone
+    to: Zone
+
+    def setup(self, **kwargs):
+        self._values.setdefault('to', self.game.scrap_pile)
 
     def payload(self, **kwargs):
         self.spawn_tree(MoveCardboard)
@@ -381,7 +397,10 @@ class TakeTurn(SKGameEvent):
             move.do()
 
         for cardboard in self.player.battlefield.iter_copy():
-            self.spawn_tree(DestroyCardboard, target = cardboard)
+            if not cardboard.card.card_type == CardType.BASE:
+                self.spawn_tree(DestroyCardboard, target = cardboard)
+            else:
+                cardboard.card.actions.refresh()
 
         for cardboard in self.player.hand.iter_copy():
             self.spawn_tree(DiscardCardboard, target = cardboard)
