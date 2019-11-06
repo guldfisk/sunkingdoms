@@ -1,37 +1,33 @@
+import typing as t
+
 import copy
 import itertools
-import typing as t
+
 from collections import defaultdict, OrderedDict
 from enum import Enum
+from multiprocessing.connection import Connection
 
 from eventtree.replaceevent import Event
 from gameframe.connectioncontroller import ConnectionController
 from gameframe.events import GameEvent
 from gameframe.interface import GameInterface, Option, O
-from gameframe.signature import PlayerSignature
-from sunkingdoms.artifacts import Zone, Cardboard
+from gameframe.signature import ObserverSignature, PlayerSignature
+from sunkingdoms.artifacts.artifacts import Zone, Cardboard
 from sunkingdoms.events import TakeTurn
-from sunkingdoms.players import SKPlayer
+from sunkingdoms.players.player import SKPlayer
 from yeetlong.multiset import Multiset
 
 
-class SKPlayerSignature(PlayerSignature):
-
-    def __init__(self, name: str):
-        self._name = name
-
-    def __hash__(self) -> int:
-        return hash(self._name)
-
-    def __eq__(self, other) -> bool:
-        return (
-            isinstance(other, self.__class__)
-            and self._name == other._name
-        )
-
-
 class SKDummyController(ConnectionController):
-    pass
+
+    def __init__(self, signatures: t.Iterable[ObserverSignature]):
+        super().__init__(signatures)
+        self._player_signatures = set(
+            signature
+            for signature in
+            signatures
+            if isinstance(signature, PlayerSignature)
+        )
 
 
 class _OptionSelectionContext(object):
@@ -108,7 +104,7 @@ def serialize_object(o: t.Any):
     elif isinstance(o, Cardboard):
         return o.card.name
     elif isinstance(o, SKPlayer):
-        return 'player'
+        return o.signature.name
     elif isinstance(o, Option):
         return f'{o.option_type}|{o.value}'
     else:
@@ -121,7 +117,6 @@ class SKDummyInterface(GameInterface):
         START = ''
         SUCCESS = '>'
         FAIL = '!>'
-
 
     def __init__(self, controller: ConnectionController):
         super().__init__(controller)

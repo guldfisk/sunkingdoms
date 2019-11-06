@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import typing as t
+from abc import abstractmethod
 from enum import Enum
 
 from eventtree.replaceevent import EventSession
 from gameframe.events import GameEvent
+from sunkingdoms.artifacts.artifact import GameArtifact
+from sunkingdoms.attack import Target
 from sunkingdoms.zones import Zoneable, Zone
 
 
@@ -18,13 +21,16 @@ class Price(object):
         return self._amount
 
 
-class Cardboard(Zoneable):
+class Cardboard(Zoneable, Target):
 
     def __init__(self, game: EventSession, event: GameEvent, card_type: t.Type[Card]):
         super().__init__(game, event)
         self._printed_card_type = card_type
         self._card = card_type(self, event)
         self._zone = None
+
+    def attack(self, damage: int, event: GameEvent):
+        self._card.attack(damage, event)
 
     @property
     def card(self) -> Card:
@@ -102,6 +108,9 @@ class Card(object):
     factions: t.FrozenSet[Faction] = frozenset()
     card_type: CardType = CardType.SHIP
 
+    health: int = 0
+    outpost: bool = False
+
     def __init__(self, cardboard: Cardboard, event: GameEvent):
         self._cardboard = cardboard
         self._actions = Actions(())
@@ -109,12 +118,9 @@ class Card(object):
     def on_play(self, event: GameEvent):
         pass
 
+    def attack(self, damage: int, event: GameEvent):
+        pass
+
     @property
     def actions(self) -> Actions:
         return self._actions
-
-
-class Base(Card):
-    card_type = CardType.BASE
-    health: int
-    outpost: bool

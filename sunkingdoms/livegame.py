@@ -1,5 +1,5 @@
 from sunkingdoms import events
-from sunkingdoms.game import SKGame
+from sunkingdoms.game.game import SKGame
 
 
 class LiveGame(SKGame):

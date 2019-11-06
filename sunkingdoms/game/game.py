@@ -2,25 +2,28 @@ from __future__ import annotations
 
 import typing as t
 
-from gameframe.events import GameEvent
-from gameframe.game import Game
-from gameframe.interface import GameInterface
 from ring import Ring
-from sunkingdoms.artifacts import Cardboard
-from sunkingdoms.players import SKPlayer
+
+from gameframe.events import GameEvent
+from gameframe.interface import GameInterface
+
+from sunkingdoms.artifacts.artifacts import Cardboard
+from sunkingdoms.players.player import SKPlayer
 from sunkingdoms.setup import SKSetup
+from sunkingdoms.signatures import SKPlayerSignature
 from sunkingdoms.zones import Zone
+from sunkingdoms.game.interface import SKGame as SKGameInterface
 
 
-class SKGame(Game):
+class SKGame(SKGameInterface):
 
-    def __init__(self, setup_info: SKSetup, interface: GameInterface):
-        super().__init__(setup_info, interface)
+    def __init__(self, setup_info: SKSetup, interface: GameInterface, signatures: t.Collection[SKPlayerSignature]):
+        super().__init__(setup_info, interface, signatures)
 
         self._players = Ring(
-            SKPlayer(self)
-            for _ in
-            range(setup_info.player_count)
+            SKPlayer(self, signature)
+            for signature in
+            signatures
         )
 
         self._trade_deck = Zone(

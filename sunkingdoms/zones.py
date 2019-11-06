@@ -2,7 +2,7 @@ import random
 import typing as t
 import copy
 
-from sunkingdoms.artifact import GameArtifact
+from sunkingdoms.artifacts.artifact import GameArtifact
 
 
 class Zoneable(GameArtifact):

@@ -3,12 +3,13 @@ from __future__ import annotations
 import typing as t
 
 from eventtree import replaceevent as rev
-from eventtree.replaceevent import StaticAttributeModification, Event, T
+from eventtree.replaceevent import StaticAttributeModification
 from gameframe.events import GameEvent
 from gameframe.interface import Option
-from sunkingdoms.artifacts import Card, Price, Cardboard, Actions, Action, Faction, Base
+from sunkingdoms.artifacts.artifacts import Card, Price, Cardboard, Actions, Action, Faction
+from sunkingdoms.artifacts.base import Base
 from sunkingdoms import events as e
-from sunkingdoms.players import SKPlayer
+from sunkingdoms.players.player import SKPlayer
 from yeetlong.multiset import Multiset
 
 

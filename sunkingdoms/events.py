@@ -5,10 +5,13 @@ from abc import abstractmethod
 from eventtree.replaceevent import EventCheckException, EventResolutionException
 from gameframe.events import GameEvent
 from gameframe.interface import Option
-from sunkingdoms.artifacts import Card, Cardboard, Action, CardType
+from sunkingdoms.artifacts.artifacts import Card, Cardboard, CardType, Action
 from sunkingdoms import cards
-from sunkingdoms.game import Zone, SKSetup, SKGame
-from sunkingdoms.players import SKPlayer
+from sunkingdoms.attack import Target
+from sunkingdoms.game.interface import SKGame
+from sunkingdoms.players.interface import SKPlayer
+from sunkingdoms.setup import SKSetup
+from sunkingdoms.zones import Zone
 
 
 class SKGameEvent(GameEvent):
@@ -253,6 +256,15 @@ class ScrapCardboard(SKGameEvent):
         self.spawn_tree(MoveCardboard)
 
 
+class Attack(SKGameEvent):
+    target: Target
+    amount: int
+
+    def payload(self, **kwargs):
+        self.depend_tree(SubtractDamage)
+        self.target.attack(self.amount, self)
+
+
 class AddMoney(SKGameEvent):
     amount: int
 
@@ -300,6 +312,13 @@ class AddDamage(SKGameEvent):
         self.player.damage += self.amount
 
 
+class SubtractDamage(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.damage -= self.amount
+
+
 class ResetResources(SKGameEvent):
 
     def payload(self, **kwargs):
@@ -322,6 +341,13 @@ class GainInfluence(SKGameEvent):
 
     def payload(self, **kwargs):
         self.player.influence += self.amount
+
+
+class LoseInfluence(SKGameEvent):
+    amount: int
+
+    def payload(self, **kwargs):
+        self.player.influence -= self.amount
 
 
 class TakeTurn(SKGameEvent):
@@ -357,6 +383,17 @@ class TakeTurn(SKGameEvent):
             )
         )
 
+    def _attack_action(self, target: Target):
+        return Move(
+            'attack',
+            target.card.name if isinstance(target, Cardboard) else target.signature.name,
+            lambda : self.spawn_tree(
+                Attack,
+                target = target,
+                amount = target.card.health if isinstance(target, Cardboard) else self.player.damage,
+            )
+        )
+
     def payload(self, **kwargs):
         while True:
             moves: t.List[Move] = []
@@ -378,6 +415,14 @@ class TakeTurn(SKGameEvent):
                                 action,
                             )
                         )
+
+            if self.player.damage:
+                for target in self.player.opponent.get_legal_targets(self.player.damage):
+                    moves.append(
+                        self._attack_action(
+                            target
+                        )
+                    )
 
             if not moves:
                 break
